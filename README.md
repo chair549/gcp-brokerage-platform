@@ -87,3 +87,47 @@ Without this, a customer changing country would retroactively rewrite every hist
 - Marts are materialised into the same BigQuery dataset as staging models. Separating them requires a `generate_schema_name` macro override.
 - The Composer environment and streaming Dataflow job are destroyed after each session for cost reasons; both are recreated from Terraform and the DAG bucket.
 
+## Running it
+
+Requires a GCP project with billing enabled, and the `gcloud` CLI authenticated.
+
+```bash
+# 1. Provision infrastructure
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # set your project_id
+terraform init
+terraform apply
+
+# 2. Streaming path
+python pipelines/streaming/pipeline.py \
+  --project $PROJECT \
+  --subscription projects/$PROJECT/subscriptions/trading-events-dataflow-dev \
+  --events_table $PROJECT:raw_dev.trading_events \
+  --dlq_table $PROJECT:raw_dev.trading_events_dlq \
+  --runner DirectRunner \
+  --temp_location gs://$PROJECT-dev-staging/tmp
+
+# in a second terminal
+python data_generation/generate_trading_events.py --project $PROJECT --duration 60
+
+# 3. Batch path
+python data_generation/generate_reference_data.py --out-dir ./data/reference
+python pipelines/batch/load_reference.py \
+  --project $PROJECT \
+  --bucket $PROJECT-dev-landing \
+  --source-dir ./data/reference
+
+# 4. Transform
+cd transform/brokerage
+dbt snapshot && dbt run && dbt test
+
+# 5. Orchestration (expensive, destroy after use)
+gcloud storage cp -r orchestration/dags/* $(terraform output -raw composer_dag_bucket)/
+terraform destroy -target=google_composer_environment.main
+```
+
+Swap `--runner DirectRunner` for `--runner DataflowRunner --region australia-southeast1` to deploy to managed Dataflow.
+
+## Cost management
+
+Cloud Composer and streaming Dataflow are the only components with meaningful ongoing cost. Both are created for a session and destroyed afterwards. Everything else (Cloud Storage, BigQuery, Pub/Sub) is negligible at this volume. A project budget alert is configured at $50.
