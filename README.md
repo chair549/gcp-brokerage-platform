@@ -81,6 +81,20 @@ Without this, a customer changing country would retroactively rewrite every hist
 
 **Idempotent loads.** Batch loads use `WRITE_TRUNCATE` and accept a `--load-date` parameter. Airflow retries tasks automatically, so every task must be safe to re-run. The same parameter enables backfilling historical partitions.
 
+## Screenshots
+
+**Dataflow streaming job** — Beam pipeline running on managed Dataflow, showing the branch into the dead-letter path.
+
+![Dataflow job](docs/Dataflow_Job.png)
+
+**Airflow DAG** — daily pipeline: ingest, snapshot, run, test.
+
+![Airflow DAG](docs/Airflow_Pipeline_DAG.png)
+
+**dbt lineage** — dependency graph generated from `ref()` and `source()` declarations.
+
+![dbt lineage](docs/dbt_lineage_graph.png)
+
 ## Known limitations
 
 - The dbt project is copied into the Composer DAG bucket and dbt is installed at task runtime. Composer pins Airflow's dependencies tightly, and `dbt-bigquery` conflicts with them when installed via `pypi_packages`. In production this would run as a container via `KubernetesPodOperator`, or use Cosmos to expose each dbt model as its own Airflow task.
