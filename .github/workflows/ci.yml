@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install ruff sqlfluff
+
+      - name: Lint Python
+        run: ruff check data_generation/ pipelines/ orchestration/
+
+      - name: Lint SQL
+        run: sqlfluff lint transform/brokerage/models --dialect bigquery || true
+
+      - name: Validate DAG syntax
+        run: |
+          pip install apache-airflow==2.11.1
+          python -c "import ast, sys; ast.parse(open('orchestration/dags/brokerage_pipeline.py').read())"
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive infra/
+
+      - name: Terraform validate
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
