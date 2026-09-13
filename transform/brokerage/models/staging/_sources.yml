@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: raw
+    database: de-portfolio-508507
+    schema: raw_dev
+    description: Raw ingested data from streaming and batch pipelines
+
+    tables:
+      - name: trading_events
+        description: Order lifecycle events from the trading application
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+
+      - name: customers
+        description: Customer and account reference data
+
+      - name: instruments
+        description: Tradeable instrument reference data
+
+      - name: fx_rates
+        description: Daily AUD/USD exchange rates

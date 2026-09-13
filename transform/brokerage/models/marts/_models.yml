@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: Customer dimension with SCD2 history
+    columns:
+      - name: customer_key
+        description: Surrogate key, unique per customer version
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+      - name: country
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['AU', 'NZ', 'GB']
+
+  - name: dim_instrument
+    description: Tradeable instrument reference
+    columns:
+      - name: instrument_key
+        tests:
+          - unique
+          - not_null
+      - name: sector
+        tests:
+          - not_null
+
+  - name: fct_trades
+    description: One row per executed trade
+    columns:
+      - name: trade_key
+        tests:
+          - unique
+          - not_null
+      - name: customer_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: ticker
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_instrument')
+                field: instrument_key
+      - name: quantity
+        tests:
+          - not_null
+      - name: gross_value_aud
+        tests:
+          - not_null

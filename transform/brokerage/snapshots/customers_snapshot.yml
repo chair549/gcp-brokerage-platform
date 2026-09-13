@@ -1,0 +1,11 @@
+snapshots:
+  - name: customers_snapshot
+    relation: source('raw', 'customers')
+    config:
+      schema: staging_dev
+      unique_key: account_id
+      strategy: check
+      check_cols:
+        - country
+        - account_status
+        - email
