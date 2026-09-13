@@ -90,7 +90,7 @@ def run(argv=None):
     parser.add_argument("--dlq_table", required=True)
     known, pipeline_args = parser.parse_known_args(argv)
 
-    options = PipelineOptions(pipeline_args)
+    options = PipelineOptions(pipeline_args, project=known.project, save_main_session=True)
     options.view_as(StandardOptions).streaming = True
 
     with beam.Pipeline(options=options) as p:

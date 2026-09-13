@@ -45,6 +45,10 @@ resource "google_storage_bucket" "staging" {
   uniform_bucket_level_access = true
   force_destroy               = true
 
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
+
   lifecycle_rule {
     condition {
       age = 7
