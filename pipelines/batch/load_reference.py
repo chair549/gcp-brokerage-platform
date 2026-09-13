@@ -2,7 +2,7 @@ import argparse
 import os
 from datetime import date
 
-from google.cloud import storage, bigquery
+from google.cloud import bigquery, storage
 
 SCHEMAS = {
     "customers": [

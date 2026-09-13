@@ -1,5 +1,10 @@
-import argparse, json, random, time, uuid
-from datetime import datetime, timezone, timedelta
+import argparse
+import json
+import random
+import time
+import uuid
+from datetime import datetime, timedelta, timezone
+
 from google.cloud import pubsub_v1
 
 TICKERS = ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "NFLX"]
