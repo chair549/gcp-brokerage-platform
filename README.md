@@ -63,3 +63,27 @@ and (f.event_timestamp < c.valid_to or c.valid_to is null)
 
 Without this, a customer changing country would retroactively rewrite every historical trade they had made, and previously published reports would no longer reproduce.
 
+## Design decisions
+
+**Dead-letter routing over fail-fast.** Malformed records are written to `raw_dev.trading_events_dlq` with the original payload and an error classification, rather than crashing the pipeline or being dropped. One poison message should not halt ingestion, and silently discarding bad data makes reconciliation impossible later. Pub/Sub is also configured with a dead-letter policy after five delivery attempts, covering failures the pipeline never acknowledges.
+
+**Deduplication at two layers.** The Beam pipeline deduplicates on `event_id` within a 60-second window, which handles the at-least-once redelivery Pub/Sub guarantees. The staging model deduplicates again with `row_number()`, catching anything arriving outside that window, such as a redelivery after a pipeline restart. Unbounded dedup state in the streaming layer would be expensive; a second pass in the warehouse is cheap and runs once per build.
+
+**Partitioning and clustering.** `trading_events` is partitioned by `event_timestamp` (day) and clustered on `event_type` and `ticker`. BigQuery charges by bytes scanned, so partition pruning on date filters is the main cost lever, with clustering reducing scan further within each partition.
+
+**SCD2 on customers only.** Instruments are effectively static and FX rates are already time-series by nature. Applying SCD2 everywhere adds complexity without analytical value.
+
+**First version backdated.** The initial snapshot version of each customer is backdated to 1900-01-01. dbt stamps `valid_from` with the time of the first snapshot run, but customers existed before tracking began, so facts predating that timestamp would find no matching dimension row.
+
+**Tiered storage lifecycle.** Landing zone objects move to Nearline after 30 days and are deleted after 90. Soft delete is disabled on the staging and artifacts buckets, where retaining deleted temp files is pure cost, but retained on landing where raw data recoverability is worth paying for.
+
+**Idempotent loads.** Batch loads use `WRITE_TRUNCATE` and accept a `--load-date` parameter. Airflow retries tasks automatically, so every task must be safe to re-run. The same parameter enables backfilling historical partitions.
+
+## Known limitations
+
+- The dbt project is copied into the Composer DAG bucket and dbt is installed at task runtime. Composer pins Airflow's dependencies tightly, and `dbt-bigquery` conflicts with them when installed via `pypi_packages`. In production this would run as a container via `KubernetesPodOperator`, or use Cosmos to expose each dbt model as its own Airflow task.
+- The Composer service account is granted `bigquery.admin`. This should be scoped to specific datasets.
+- The Dataflow job was deployed manually for validation. Production deployment would use a Flex Template launched from the DAG.
+- Marts are materialised into the same BigQuery dataset as staging models. Separating them requires a `generate_schema_name` macro override.
+- The Composer environment and streaming Dataflow job are destroyed after each session for cost reasons; both are recreated from Terraform and the DAG bucket.
+
