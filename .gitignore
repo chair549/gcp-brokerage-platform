@@ -1,0 +1,31 @@
+# Credentials - never commit these
+*.json
+!package.json
+!package-lock.json
+.env
+*-key.json
+credentials/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# OS and editor
+.DS_Store
+.vscode/
+.idea/
