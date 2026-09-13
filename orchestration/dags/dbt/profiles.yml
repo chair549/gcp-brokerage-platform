@@ -1,0 +1,12 @@
+brokerage:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: oauth
+      project: de-portfolio-508507
+      dataset: staging_dev
+      location: australia-southeast1
+      threads: 4
+      job_execution_timeout_seconds: 300
+      job_retries: 1
