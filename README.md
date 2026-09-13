@@ -4,6 +4,8 @@ An end-to-end data platform on Google Cloud simulating a retail brokerage: strea
 
 Built to demonstrate the GCP data engineering stack end to end: Terraform, Pub/Sub, Dataflow, Cloud Storage, BigQuery, dbt, and Cloud Composer.
 
+![Architecture](docs/architecture.svg)
+
 ## Architecture
 
 | Layer | Technology | Purpose |
